@@ -26,3 +26,10 @@ $client->push_transaction( 'eosio.token', 'transfer', [
 	'memo': 'Thank you for your service.',
 ], 'soulseekah@active' );
 ```
+
+## Methods
+
+```php
+$client->get_info(); // Get chain info
+$client->get_abi( $account ); // Get contract ABI
+```

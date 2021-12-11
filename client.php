@@ -22,7 +22,7 @@ class Client {
 	 * @param string $rpc_endpoint The RPC endpoint to connect to.
 	 */
 	public function __construct( string $rpc_endpoint ) {
-		$this->rpc_endpoint = $rpc_endpoint;
+		$this->rpc_endpoint = ltrim( $rpc_endpoint, '/' );
 	}
 
 	/**
@@ -63,7 +63,7 @@ class Client {
 	}
 
 	/**
-	 * Push a transaction with a single action.
+	 * Assemble, sign and push a transaction with a single action.
 	 *
 	 * Will throw exceptions in case of failures.
 	 *
@@ -83,6 +83,8 @@ class Client {
 			throw new \Exception( sprintf( 'Invalid authorization for %s. Known: %s', $authorization, implode( ' ', array_keys( $this->authorizations ) ) ) );
 		}
 
+		list( $actor, $permission ) = explode( '@', $authorization );
+
 		$ec = new \Elliptic\EC( 'secp256k1' );
 		$base58 = new \StephenHill\Base58();
 
@@ -90,5 +92,61 @@ class Client {
 		$public = hex2bin( $key->getPublic( true, 'hex' ) );
 		$checksum = mb_substr( hash( 'ripemd160', $public, true ), 0, 4 );
 		$public = 'EOS' . $base58->encode( "$public$checksum" );
+
+		var_dump( $this->get_info() );
+		exit;
+
+		$transaction = [
+			'actions' => [ [
+				'account' => $account,
+				'name' => $action,
+				'data' => $data,
+				'authorization' => [ [
+					'actor' => $actor,
+					'permission' => $permission,
+				] ],
+			] ],
+			'context_free_data' => [],
+		];
+	}
+
+	/**
+	 * Get ABI.
+	 *
+	 * @param string $account The account to get the ABI for.
+	 *
+	 * @return array The ABI.
+	 */
+	public function get_abi( string $account ) : array {
+		return $this->_request( 'v1/chain/get_abi', [ 'account_name' => $account ] );
+	}
+
+	/**
+	 * Get blockchain info.
+	 *
+	 * @return array The blockchain info.
+	 */
+	public function get_info() : array {
+		return $this->_request( 'v1/chain/get_info' );
+	}
+
+	/**
+	 * Make HTTP request.
+	 *
+	 * @param string $endpoint The endpoint.
+	 * @param array $data The data.
+	 *
+	 * @return array The response.
+	 */
+	private function _request( string $endpoint, array $data = null ) : array {
+		$response = \Requests::post( sprintf( '%s/%s', $this->rpc_endpoint, trim( $endpoint, '/' ) ), [
+			'Content-Type' => 'application/json',
+		], is_null( $data ) ? '' : json_encode( $data ) )->decode_body();
+
+		if ( isset( $response['error'] ) ) {
+			throw new \Exception( sprintf( 'Invalid response from API: %s', json_encode( $response ) ) );
+		}
+
+		return $response;
 	}
 }
