@@ -4,8 +4,58 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "fc4ec76db6edd8a77bce0e78e8041690",
+    "content-hash": "28cf7eba624b6417682e6dabdda2ef2f",
     "packages": [
+        {
+            "name": "muvon/kiss-varint",
+            "version": "0.3.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/Muvon/php-kiss-varint.git",
+                "reference": "583d5cc5e68b620e7eb90db2fb0d1591edbd7977"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/Muvon/php-kiss-varint/zipball/583d5cc5e68b620e7eb90db2fb0d1591edbd7977",
+                "reference": "583d5cc5e68b620e7eb90db2fb0d1591edbd7977",
+                "shasum": ""
+            },
+            "require-dev": {
+                "phpunit/phpunit": "^10"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Muvon\\KISS\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Muvon Co. Ltd",
+                    "email": "contact@muvon.io"
+                }
+            ],
+            "description": "varint read and pack convertion int/uint",
+            "keywords": [
+                "bitclout",
+                "decoder",
+                "encoder",
+                "int",
+                "kiss",
+                "lightweight",
+                "uint",
+                "varint"
+            ],
+            "support": {
+                "issues": "https://github.com/Muvon/php-kiss-varint/issues",
+                "source": "https://github.com/Muvon/php-kiss-varint/tree/0.3.0"
+            },
+            "time": "2021-11-23T07:01:26+00:00"
+        },
         {
             "name": "rmccue/requests",
             "version": "v2.0.0",

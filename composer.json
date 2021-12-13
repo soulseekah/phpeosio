@@ -2,6 +2,7 @@
     "require": {
         "rmccue/requests": "^2.0",
         "stephenhill/base58": "^1.1",
-        "simplito/elliptic-php": "^1.0"
+        "simplito/elliptic-php": "^1.0",
+        "muvon/kiss-varint": "^0.3.0"
     }
 }
