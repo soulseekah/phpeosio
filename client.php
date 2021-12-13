@@ -94,7 +94,7 @@ class Client {
 		$transaction = $this->_serialize( [
 			'expiration' => date( 'Y-m-d\TH:i:s', strtotime( $info['last_irreversible_block_time'] ) + $expiration ),
 			'ref_block_num' => $info['last_irreversible_block_num'] & 0xffff,
-			'ref_block_prefix' => unpack( 'V', mb_substr( $info['last_irreversible_block_id'], 16, 8 ) )[1],
+			'ref_block_prefix' => unpack( 'V', hex2bin( mb_substr( $info['last_irreversible_block_id'], 16, 8 ) ) )[1],
 			'max_net_usage_words' => 0,
 			'max_cpu_usage_ms' => 0,
 			'delay_sec' => 0,
@@ -134,7 +134,6 @@ class Client {
 		$signature = 'SIG_K1_' . $base58->encode( $signature . mb_substr( hash( 'ripemd160', $signature . 'K1', true ), 0, 4 ) );
 
 		return $this->_request( 'v1/chain/push_transaction', [
-		// var_dump( [
 			'signatures' => [
 				$signature,
 			],
@@ -142,7 +141,6 @@ class Client {
 			'packed_trx' => bin2hex( $transaction ),
 			'packed_context_free_data' => '',
 		] );
-		exit;
 	}
 
 	/**
