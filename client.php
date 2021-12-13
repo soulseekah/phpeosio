@@ -71,10 +71,11 @@ class Client {
 	 * @param string $action The action. `bidname`
 	 * @param array $data The data as a JSON-serializable array. Example: `{"bidder":"soulseekah","newname":"phpeosio","bid":"1.0000 EOS"}`
 	 * @param string $authorization The authorization name. Example `soulseekah@active`
+	 * @param int $expiration When the transaction should expire. Default: 30
 	 *
 	 * @return array The response.
 	 */
-	public function push_transaction( string $account, string $action, array $data, string $authorization ) : array {
+	public function push_transaction( string $account, string $action, array $data, string $authorization, int $expiration = 30 ) : array {
 		if ( empty( $this->authorizations ) ) {
 			throw new \Exception( 'No known authorizations. Use Client::add_key' );
 		}
@@ -86,17 +87,12 @@ class Client {
 		list( $actor, $permission ) = explode( '@', $authorization );
 
 		$ec = new \Elliptic\EC( 'secp256k1' );
-		$base58 = new \StephenHill\Base58();
-
 		$key = $ec->keyFromPrivate( bin2hex( $this->authorizations[ $authorization ] ) );
-		$public = hex2bin( $key->getPublic( true, 'hex' ) );
-		$checksum = mb_substr( hash( 'ripemd160', $public, true ), 0, 4 );
-		$public = 'EOS' . $base58->encode( "$public$checksum" );
 
 		$info = $this->get_info();
 
 		$transaction = $this->_serialize( [
-			'expiration' => $info['last_irreversible_block_time'],
+			'expiration' => date( 'Y-m-d\TH:i:s', strtotime( $info['last_irreversible_block_time'] ) + $expiration ),
 			'ref_block_num' => $info['last_irreversible_block_num'] & 0xffff,
 			'ref_block_prefix' => unpack( 'V', mb_substr( $info['last_irreversible_block_id'], 16, 8 ) )[1],
 			'max_net_usage_words' => 0,
@@ -115,16 +111,38 @@ class Client {
 			'context_free_actions' => [],
 		], 'transaction' );
 
-		// @todo Sign it.
+		$hash = hash( 'sha256', hex2bin( $info['chain_id'] ) . $transaction . str_repeat( "\0", 32 ) );
+
+		$tries = 0; do {
+			$signature = $key->sign( $hash, [
+				'canonical' => true,
+				'pers' => [ ++$tries ],
+			] );
+
+			$r = str_pad( implode( '', array_map( 'chr', $signature->r->toArray() ) ), 32, "\0", STR_PAD_LEFT );
+			$s = str_pad( implode( '', array_map( 'chr', $signature->s->toArray() ) ), 32, "\0", STR_PAD_LEFT );
+			$signature = mb_str_split( sprintf( '%c%s%s', max( $signature->recoveryParam + 27, $signature->recoveryParam + 31 ), $r, $s ) );
+			$signature = array_map( 'ord', $signature );
+
+			if ( ( ( ( $signature[1] & 0x80 ) === 0 ) || ( ( $signature[1] === 0 ) && ( ( $signature[2] & 0x80 ) === 0 ) ) ) && ( ( ( $signature[1] & 0x80 ) === 0 ) || ( ( $signature[1] === 0 ) && ( ( $signature[2] & 0x80 ) === 0 ) ) ) ) {
+				$signature = implode( '', array_map( 'chr', $signature ) );
+				break;
+			}
+		} while ( true );
+
+		$base58 = new \StephenHill\Base58();
+		$signature = 'SIG_K1_' . $base58->encode( $signature . mb_substr( hash( 'ripemd160', $signature . 'K1', true ), 0, 4 ) );
 
 		return $this->_request( 'v1/chain/push_transaction', [
+		// var_dump( [
 			'signatures' => [
 				$signature,
 			],
 			'compression' => 'none',
-			'packed_trx' => $packed_transaction,
+			'packed_trx' => bin2hex( $transaction ),
 			'packed_context_free_data' => '',
 		] );
+		exit;
 	}
 
 	/**
@@ -156,7 +174,7 @@ class Client {
 	 * @return array The response.
 	 */
 	private function _request( string $endpoint, array $data = null ) : array {
-		$response = \Requests::post( sprintf( '%s/%s', $this->rpc_endpoint, trim( $endpoint, '/' ) ), [
+		$response = \WpOrg\Requests\Requests::post( sprintf( '%s/%s', $this->rpc_endpoint, trim( $endpoint, '/' ) ), [
 			'Content-Type' => 'application/json',
 		], is_null( $data ) ? '' : json_encode( $data ) )->decode_body();
 
