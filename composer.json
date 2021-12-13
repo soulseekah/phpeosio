@@ -1,4 +1,23 @@
 {
+	"name": "soulseekah/phpeosio",
+	"description": "A native EOSIO HTTP JSON RPC client",
+	"keywords": [
+		"blockchain",
+		"eosio",
+		"eos",
+		"rpc"
+	],
+	"type": "library",
+	"license": "MIT",
+	"authors": [
+		{
+			"name": "Gennady Kovshenin",
+			"email": "gennady@kovshenin.com"
+		}
+	],
+	"autoload": {
+		"files": [ "client.php" ]
+	},
     "require": {
         "rmccue/requests": "^2.0",
         "stephenhill/base58": "^1.1",

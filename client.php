@@ -1,8 +1,6 @@
 <?php
 namespace PHPEOSIO;
 
-require __DIR__ . '/vendor/autoload.php';
-
 mb_internal_encoding( '8bit' );
 
 class Client {

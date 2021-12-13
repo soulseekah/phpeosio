@@ -2,6 +2,12 @@
 
 A minimalistic and pure PHP implementation to interact with EOSIO blockchains via JSON RPC endpoints via HTTP.
 
+## Installation
+
+```bash
+composer require soulseekah/phpeosio
+```
+
 ## Usage
 
 ```php
