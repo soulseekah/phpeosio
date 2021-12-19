@@ -38,4 +38,5 @@ $client->push_transaction( 'eosio.token', 'transfer', [
 ```php
 $client->get_info(); // Get chain info
 $client->get_abi( $account ); // Get contract ABI
+$client->get_table_rows( $account, $table, $scope ); // Get table rows
 ```

@@ -162,6 +162,39 @@ class Client {
 	}
 
 	/**
+	 * Get table rows.
+	 *
+	 * @param string $account The contract that owns the table.
+	 * @param string $table The table.
+	 * @param string $scope The scope of the data (user).
+	 * @param args $args Extra args like limit, lower_bound, etc.
+	 *
+	 * @return array The table rows.
+	 */
+	public function get_table_rows( string $account, string $table, string $scope, array $args = [] ) : array {
+		$result = $this->_request( 'v1/chain/get_table_rows', array_merge( [
+			'code' => $account,
+			'table' => $table,
+			'scope' => $scope,
+		], $args ) );
+
+		if ( empty( $result['rows'] ) ) {
+			return [];
+		}
+
+		foreach ( $this->get_abi( $account )['abi']['structs'] as $struct ) {
+			if ( $struct['name'] === $table ) {
+				$unserialize = [ $this, '_unserialize' ];
+				return array_map( function( $row ) use ( $struct, $unserialize ) {
+					return $unserialize( hex2bin( $row ), 'struct', [ 'struct' => $struct ] );
+				}, $result['rows'] );
+			}
+		}
+
+		return [];
+	}
+
+	/**
 	 * Make HTTP request.
 	 *
 	 * @param string $endpoint The endpoint.
@@ -334,6 +367,58 @@ class Client {
 
 			default:
 				throw new \Exception( "Unsupported serialized type $type" );
+		endswitch;
+	}
+
+	/**
+	 * Unserialize binary data.
+	 *
+	 * @param string $data The binary data.
+	 * @param string $type The type.
+	 * @param array $args The extra args depending on type.
+	 */
+	private function _unserialize( string $data, string $type, array $args = [] ) {
+		$lengths = [
+			'name' => 8,
+			'int64' => 8, 'uint64' => 8,
+		];
+		switch ( $type ):
+			case 'struct':
+				$read = function( &$bytes, $length ) {
+					$read = mb_substr( $bytes, 0, $length );
+					$bytes = mb_substr( $bytes, $length );
+					return $read;
+				};
+				$unserialize = [ $this, __FUNCTION__ ];
+				return array_combine(
+					array_column( $args['struct']['fields'], 'name' ),
+					array_map( function( $field ) use ( $unserialize, $read, &$data, $lengths ) {
+						return $unserialize( $read( $data, $lengths[ $field['type'] ] ), $field['type'] );
+					}, $args['struct']['fields'] ) );
+				return $result;
+
+			case 'name':
+				if ( mb_strlen( $data ) !== 8 ) {
+					throw new \Exception( "name must be 64-bits in length" );
+				}
+				$map = array_flip( mb_str_split( '.12345abcdefghijklmnopqrstuvwxyz' ) );
+				$binary = implode( '', array_reverse( array_map( function( $b ) {
+					return str_pad( decbin( ord( $b ) ), 8, "0", STR_PAD_LEFT );
+				}, mb_str_split( ltrim( $data, "\0" ) ) ) ) );
+
+				preg_match_all( '#[01]{4,5}#', $binary, $bytes );
+				return trim( implode( '', array_map( function( $byte ) use ( $map ) {
+					return array_search( bindec( $byte ), $map );
+				}, $bytes[0] ) ), '.' );
+
+			case 'uint64':
+				return 0;
+
+			case 'int64':
+				return 0;
+				
+			default:
+				throw new \Exception( "Unsupported serialized type $type for unserialization" );
 		endswitch;
 	}
 }
